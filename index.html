@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+	<head>
+			<style>
+				.board {
+					background-color: #E6E6E6;
+					height: 200px;
+					width: 300px;
+				}
+
+				.ball {
+					background-color: #000000;
+					height: 20px;
+					width: 20px;
+					position: relative;
+				}
+			</style>
+			<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+			<script>
+				var game = function() {
+					var board = {
+						image: $(".board"),
+						xSize: 300,
+						ySize: 200,
+						zSize: 300,
+						increment: 25
+
+					}
+
+					var baseTime = 500;
+					
+					var ball = {
+						image: $(".ball"),
+						maxSize: 25,
+						minSize: 5,
+						x: 0,
+						xOffset: 2,
+						y: 0,
+						yOffset: -2
+					}
+
+					var bounceIn = function() {
+						var xSize = (ball.xOffset * board.increment);
+						var ySize = (ball.yOffset * board.increment);
+						
+						var length = Math.sqrt(xSize * xSize + ySize * ySize + board.zSize * board.zSize);
+						var time = baseTime * (length / board.zSize);
+
+						ball.image.animate({
+					    height: ball.minSize,
+					    width: ball.minSize,
+					    left: "+=" + xSize,
+					    bottom: "+=" + ySize
+					  }, time, function() {
+					    bounceOut();
+					  });
+					}
+
+					var bounceOut = function() {
+						var xSize = (ball.xOffset * board.increment);
+						var ySize = (ball.yOffset * board.increment);
+						
+						var length = Math.sqrt(xSize * xSize + ySize * ySize + board.zSize * board.zSize);
+						var time = baseTime * (length / board.zSize);
+
+						ball.image.animate({
+					    height: ball.maxSize,
+					    width: ball.maxSize,
+					    left: "+=" + xSize,
+					    bottom: "+=" + ySize
+					  }, time, function() {
+
+					  });
+					}
+
+					var drawBall = function() {
+						
+					}
+
+					var setup = function() {
+						bounceIn();
+					}
+
+					setup();
+				}
+				
+				$(document).ready(function(){
+					game();
+				});
+			</script>
+		</head>
+
+	<body>
+		<div class="board">
+			<div class="ball"></div>
+		</div>
+	</body>
+</html>
