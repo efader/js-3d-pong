@@ -4,18 +4,25 @@
 			<style>
 				.board {
 					background-color: #E6E6E6;
-					height: 200px;
-					width: 300px;
 				}
 
 				.ball {
 					background-color: #000000;
-					height: 20px;
-					width: 20px;
 					position: relative;
+				}
+
+				.paddle {
+					position: absolute;
+					opacity: 0.5;
+					background-color: blue;
+				}
+
+				body {
+					cursor: none;
 				}
 			</style>
 			<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+			<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/jquery-ui.min.js"></script>
 			<script>
 				var game = function() {
 					var board = {
@@ -23,7 +30,7 @@
 						xSize: 300,
 						ySize: 200,
 						zSize: 300,
-						increment: 25
+						increment: 50
 
 					}
 
@@ -34,50 +41,98 @@
 						maxSize: 25,
 						minSize: 5,
 						x: 0,
-						xOffset: 2,
+						xOffset: 1,
 						y: 0,
-						yOffset: -2
+						yOffset: 1
+					}
+
+					var paddle = {
+						image: $(".paddle"),
+						xSize: 50,
+						ySize: 40,
+					}
+
+					var bounce = function(size,, time, easing, callback) {
+						var xSize = (ball.xOffset * board.increment);
+						var ySize = (ball.yOffset * board.increment);
+						
+						var length = Math.sqrt(xSize * xSize + ySize * ySize + board.zSize * board.zSize);
+						var time = baseTime * (length / board.zSize);
+
+						ball.image.animate({
+						    height: size,
+						    width: size,
+						    left: "+=" + xSize,
+						    top: "+=" + ySize
+					  	},
+					  	{
+					  		duration: time,
+					  		easing: easing,
+					  		complete: callback
+					  	});
 					}
 
 					var bounceIn = function() {
-						var xSize = (ball.xOffset * board.increment);
-						var ySize = (ball.yOffset * board.increment);
-						
-						var length = Math.sqrt(xSize * xSize + ySize * ySize + board.zSize * board.zSize);
-						var time = baseTime * (length / board.zSize);
-
-						ball.image.animate({
-					    height: ball.minSize,
-					    width: ball.minSize,
-					    left: "+=" + xSize,
-					    bottom: "+=" + ySize
-					  }, time, function() {
-					    bounceOut();
-					  });
+						bounce(ball.minSize, "easeOutSine", function() {
+							bounceOut();
+						});
 					}
 
 					var bounceOut = function() {
-						var xSize = (ball.xOffset * board.increment);
-						var ySize = (ball.yOffset * board.increment);
-						
-						var length = Math.sqrt(xSize * xSize + ySize * ySize + board.zSize * board.zSize);
-						var time = baseTime * (length / board.zSize);
+						bounce(ball.maxSize, "easeInSine", function() {
+							var ballPosition = ball.image.position();
+							var paddlePosition = paddle.image.position();
 
-						ball.image.animate({
-					    height: ball.maxSize,
-					    width: ball.maxSize,
-					    left: "+=" + xSize,
-					    bottom: "+=" + ySize
-					  }, time, function() {
+							var ballLeft = ballPosition.left;
+							var ballRight = ballPosition.left + ball.maxSize;
+							var ballTop = ballPosition.top;
+							var ballBottom = ballPosition.top + ball.maxSize;
 
-					  });
-					}
+							var paddleLeft = paddlePosition.left;
+							var paddleRight = paddlePosition.left + paddle.xSize;
+							var paddleTop = paddlePosition.top;
+							var paddleBottom = paddlePosition.top + paddle.ySize;
 
-					var drawBall = function() {
-						
+							if (ballRight >= paddleLeft
+								&& ballLeft <= paddleRight
+								&& ballTop <= paddleBottom
+								&& ballBottom >= paddleTop) {
+
+								var xDiff = ((ballLeft + ballRight) / 2) - ((paddleLeft + paddleRight) / 2);
+							
+								var yDiff = ((ballTop + ballBottom) / 2) - ((paddleTop + paddleBottom) / 2);
+								
+								ball.xOffset = (ball.xOffset * 0.8) + (xDiff / paddle.ySize);
+								ball.yOffset = (ball.yOffset * 0.8) + (yDiff / paddle.xSize);
+
+								bounceIn();
+							}			
+						});
 					}
 
 					var setup = function() {
+						board.image.css({
+							width: board.xSize,
+							height: board.ySize
+						});
+
+						ball.image.css({
+							width: ball.maxSize,
+							height: ball.maxSize
+						});
+
+						paddle.image.css({
+							width: paddle.xSize,
+							height: paddle.ySize
+						});
+
+						$(document).on('mousemove', function(e){
+						    $('.paddle').css({
+						       left:  e.pageX,
+						       top:   e.pageY
+						    });
+						});
+
 						bounceIn();
 					}
 
@@ -94,5 +149,6 @@
 		<div class="board">
 			<div class="ball"></div>
 		</div>
+		<div class="paddle"></div>
 	</body>
 </html>
