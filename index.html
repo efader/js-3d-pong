@@ -1,149 +1,307 @@
 <!DOCTYPE html>
 <html>
 	<head>
-			<style>
-				.board {
-					background-color: #E6E6E6;
+		<style>
+			.board {
+				background-color: #E6E6E6;
+			}
+
+			.ball {
+				background-color: #000000;
+				position: relative;
+				top: 50px;
+				left: 50px;
+			}
+
+			.paddle {
+				position: absolute;
+				opacity: 0.5;
+				background-color: blue;
+			}
+
+			body {
+				cursor: none;
+			}
+		</style>
+		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/jquery-ui.min.js"></script>
+		<script>
+			var game = function() {
+				var BOUNCE_IN = "easeOutSine";
+				var BOUNCE_OUT = "easeInSine";
+
+				var board = {
+					image: $(".board"),
+					xSize: 300,
+					ySize: 200,
+					zSize: 300,
+					increment: (50)
 				}
 
-				.ball {
-					background-color: #000000;
-					position: relative;
-				}
+				var boardPosition = board.image.position();
+				var boardLeft = boardPosition.left;
+				var boardRight = boardPosition.left + board.xSize;
+				var boardTop = boardPosition.top;
+				var boardBottom = boardPosition.top + board.ySize;
 
-				.paddle {
-					position: absolute;
-					opacity: 0.5;
-					background-color: blue;
-				}
-
-				body {
-					cursor: none;
-				}
-			</style>
-			<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-			<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.11.1/jquery-ui.min.js"></script>
-			<script>
-				var game = function() {
-					var board = {
-						image: $(".board"),
-						xSize: 300,
-						ySize: 200,
-						zSize: 300,
-						increment: 50
-
-					}
-
-					var baseTime = 500;
-					
-					var ball = {
-						image: $(".ball"),
-						maxSize: 25,
-						minSize: 5,
-						x: 0,
-						xOffset: 1,
-						y: 0,
-						yOffset: 1
-					}
-
-					var paddle = {
-						image: $(".paddle"),
-						xSize: 50,
-						ySize: 40,
-					}
-
-					var bounce = function(size, easing, callback) {
-						var xSize = (ball.xOffset * board.increment);
-						var ySize = (ball.yOffset * board.increment);
-						
-						var length = Math.sqrt(xSize * xSize + ySize * ySize + board.zSize * board.zSize);
-						var time = baseTime * (length / board.zSize);
-
-						ball.image.animate({
-						    height: size,
-						    width: size,
-						    left: "+=" + xSize,
-						    top: "+=" + ySize
-					  	},
-					  	{
-					  		duration: time,
-					  		easing: easing,
-					  		complete: callback
-					  	});
-					}
-
-					var bounceIn = function() {
-						bounce(ball.minSize, "easeOutSine", function() {
-							bounceOut();
-						});
-					}
-
-					var bounceOut = function() {
-						bounce(ball.maxSize, "easeInSine", function() {
-							var ballPosition = ball.image.position();
-							var paddlePosition = paddle.image.position();
-
-							var ballLeft = ballPosition.left;
-							var ballRight = ballPosition.left + ball.maxSize;
-							var ballTop = ballPosition.top;
-							var ballBottom = ballPosition.top + ball.maxSize;
-
-							var paddleLeft = paddlePosition.left;
-							var paddleRight = paddlePosition.left + paddle.xSize;
-							var paddleTop = paddlePosition.top;
-							var paddleBottom = paddlePosition.top + paddle.ySize;
-
-							if (ballRight >= paddleLeft
-								&& ballLeft <= paddleRight
-								&& ballTop <= paddleBottom
-								&& ballBottom >= paddleTop) {
-
-								var xDiff = ((ballLeft + ballRight) / 2) - ((paddleLeft + paddleRight) / 2);
-							
-								var yDiff = ((ballTop + ballBottom) / 2) - ((paddleTop + paddleBottom) / 2);
-								
-								ball.xOffset = (ball.xOffset * 0.8) + (xDiff / paddle.ySize);
-								ball.yOffset = (ball.yOffset * 0.8) + (yDiff / paddle.xSize);
-
-								bounceIn();
-							}			
-						});
-					}
-
-					var setup = function() {
-						board.image.css({
-							width: board.xSize,
-							height: board.ySize
-						});
-
-						ball.image.css({
-							width: ball.maxSize,
-							height: ball.maxSize
-						});
-
-						paddle.image.css({
-							width: paddle.xSize,
-							height: paddle.ySize
-						});
-
-						$(document).on('mousemove', function(e){
-						    $('.paddle').css({
-						       left:  e.pageX,
-						       top:   e.pageY
-						    });
-						});
-
-						bounceIn();
-					}
-
-					setup();
-				}
+				var fullTime = 500;
 				
-				$(document).ready(function(){
-					game();
-				});
-			</script>
-		</head>
+				var ball = {
+					image: $(".ball"),
+					maxSize: 25,
+					minSize: 5,
+					x: 0,
+					xOffset: 1,
+					y: 0,
+					yOffset: 0.25
+				}
+
+				var paddle = {
+					image: $(".paddle"),
+					xSize: 50,
+					ySize: 40,
+				}
+
+				var bounce = function(xSize, ySize, zSize, ballSize, easing, callback) {
+
+					var computedBounce = computeBounce(xSize, ySize, zSize, ballSize, easing, callback);
+
+					var time = computedBounce.time;
+
+					if (computedBounce.isWall) {
+						xSize = computedBounce.xSize;
+						ySize = computedBounce.ySize;
+						zSize = computedBounce.zSize;
+						callback = computedBounce.callback;
+						ballSize = computedBounce.ballSize;
+					};
+
+					bounceAnimation(xSize, ySize, ballSize, time, easing, callback);
+
+				}
+
+				var computeBounce = function(xSize, ySize, zSize, ballSize, easing, callback) {
+					var time;
+
+					var ballPosition = ball.image.position();
+					var ballLeft = ballPosition.left;
+					var ballRight = ballPosition.left + ((ball.maxSize + ballSize) / 2);
+					var ballTop = ballPosition.top;
+					var ballBottom = ballPosition.top + ((ball.maxSize + ballSize) / 2);
+
+					var newXSize;
+					var newYSize;
+					var newZSize;
+
+					var nextXSize;
+					var nextYSize;
+					var nextZSize;
+
+					var isWall = false;
+					var newBallSize;
+
+					if ((ballRight + xSize) >= boardRight && intersectsLeftRight((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardRight)) {
+						newXSize = (boardRight - ballRight);
+						nextXSize = (xSize - newXSize) * -1;
+						ball.xOffset = ball.xOffset * -1;
+
+						var fraction = Math.abs(newXSize / xSize);
+						isWall = true;
+
+						newYSize = ySize * fraction;
+						nextYSize = ySize - newYSize;
+
+						newZSize = zSize * fraction;
+						nextZSize = zSize - newZSize;
+
+					} else if ((ballLeft + xSize) <= boardLeft && intersectsLeftRight((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardLeft)) {
+						newXSize = (boardLeft - ballLeft) ;
+						nextXSize = (xSize - newXSize) * -1;
+						ball.xOffset = ball.xOffset * -1;
+
+						var fraction = Math.abs(newXSize / xSize);
+						isWall = true;
+
+						newYSize = ySize * fraction;
+						nextYSize = ySize - newYSize;
+
+						newZSize = zSize * fraction;
+						nextZSize = zSize - newZSize;
+					}
+
+						
+					if (isWall) {
+
+						mark(ballLeft, ballTop, "red");
+						mark(ballLeft + xSize, ballTop + ySize, "blue");
+
+						if (easing === BOUNCE_IN) {
+							newBallSize = ((ball.maxSize - ball.minSize) * (1 - fraction)) + ball.minSize;
+						} else {
+							newBallSize = ((ball.maxSize - ball.minSize) * fraction) + ball.minSize;
+						}
+
+						time = getBounceTime(fullTime, newXSize, newYSize, newZSize);
+
+						log("xSize: " + xSize + " | newXSize: " + newXSize + " | nextXSize: " + nextXSize + "<br />");
+						log("fraction: " + fraction + " | ballSize: " + ballSize + " | newBallSize: " + newBallSize + "<br />");
+						log("time: " + time + " | ");
+						log("<br>");
+
+					} else {
+
+						time = getBounceTime(fullTime, xSize, ySize, zSize);
+
+					}
+
+					return {
+						isWall: isWall,
+						xSize: newXSize,
+						ySize: newYSize,
+						zSize: newZSize,
+						ballSize: newBallSize,
+						time: time,
+						callback: function() {
+							bounce(nextXSize, nextYSize, nextZSize, ballSize, easing, callback);
+						}
+					}
+
+				}
+
+				var intersectsTopBottom = function(x, y, xSize, ySize, y1) {
+					var pointOnLine = (xSize / ySize) * (y1 - (y - (ySize / xSize) * x));
+
+					if (pointOnLine > boardLeft && pointOnLine < boardRight) {
+						return true;
+					}
+					return false;
+				}
+
+				var intersectsLeftRight = function(x, y, xSize, ySize, x1) {
+					var pointOnLine = (ySize / xSize) * x1 + (y - (ySize / xSize) * x);
+
+					if (pointOnLine >= boardTop && pointOnLine <= boardBottom) {
+						return true;
+					}
+					return false;
+				}
+
+				var log = function(message) {
+					$("body").append(message);
+				}
+
+				var mark  = function(x, y, color){
+					x = parseInt(x);
+					y = parseInt(y);
+					$("body").append("<div id="+x+"-"+y+">");
+					$("#"+x+"-"+y).css({
+						top: y,
+						left: x,
+						backgroundColor: color,
+						width: "2px",
+						height: "2px",
+						position: "absolute"
+					})
+				}
+
+				var bounceAnimation = function(xSize, ySize, ballSize, time, easing, callback) {
+					ball.image.animate({
+					    height: ballSize,
+					    width: ballSize,
+					    left: "+=" + xSize,
+					    top: "+=" + ySize
+				  	},
+				  	{
+				  		duration: time,
+				  		easing: easing,
+				  		complete: callback
+				  	});
+				}
+
+				var getBounceTime = function(baseTime, xSize, ySize, zSize) {
+					var length = Math.sqrt(xSize * xSize + ySize * ySize + zSize * zSize);
+					var time = baseTime * (length / Math.abs(board.zSize));
+					return time;
+				}
+
+				var bounceIn = function() {
+					var xSize = (ball.xOffset * board.increment);
+					var ySize = (ball.yOffset * board.increment);
+
+					bounce(xSize, ySize, board.zSize, ball.minSize, BOUNCE_IN, function() {
+						bounceOut();
+					});
+				}
+
+				var bounceOut = function() {
+					var xSize = (ball.xOffset * board.increment);
+					var ySize = (ball.yOffset * board.increment);
+
+					bounce(xSize, ySize, board.zSize, ball.maxSize, BOUNCE_OUT, function() {
+						var ballPosition = ball.image.position();
+						var paddlePosition = paddle.image.position();
+
+						var ballLeft = ballPosition.left;
+						var ballRight = ballPosition.left + ball.maxSize;
+						var ballTop = ballPosition.top;
+						var ballBottom = ballPosition.top + ball.maxSize;
+
+						var paddleLeft = paddlePosition.left;
+						var paddleRight = paddlePosition.left + paddle.xSize;
+						var paddleTop = paddlePosition.top;
+						var paddleBottom = paddlePosition.top + paddle.ySize;
+
+						if (ballRight >= paddleLeft
+							&& ballLeft <= paddleRight
+							&& ballTop <= paddleBottom
+							&& ballBottom >= paddleTop) {
+
+							var xDiff = ((ballLeft + ballRight) / 2) - ((paddleLeft + paddleRight) / 2);
+						
+							var yDiff = ((ballTop + ballBottom) / 2) - ((paddleTop + paddleBottom) / 2);
+							
+							ball.xOffset = (ball.xOffset * 0.8) + (xDiff / paddle.ySize);
+							ball.yOffset = (ball.yOffset * 0.8) + (yDiff / paddle.xSize);
+
+							bounceIn();
+						}			
+					});
+				}
+
+				var setup = function() {
+					board.image.css({
+						width: board.xSize,
+						height: board.ySize
+					});
+
+					ball.image.css({
+						width: ball.maxSize,
+						height: ball.maxSize
+					});
+
+					paddle.image.css({
+						width: paddle.xSize,
+						height: paddle.ySize
+					});
+
+					$(document).on('mousemove', function(e){
+					    $('.paddle').css({
+					       left:  e.pageX,
+					       top:   e.pageY
+					    });
+					});
+
+					bounceIn();
+				}
+
+				setup();
+			}
+			
+			$(document).ready(function(){
+				game();
+			});
+		</script>
+	</head>
 
 	<body>
 		<div class="board">
