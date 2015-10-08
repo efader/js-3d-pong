@@ -4,6 +4,7 @@
 		<style>
 			.board {
 				background-color: #E6E6E6;
+				z-index: 10;
 			}
 
 			.ball {
@@ -11,12 +12,21 @@
 				position: relative;
 				top: 50px;
 				left: 50px;
+				z-index: 30;
 			}
 
 			.paddle {
 				position: absolute;
 				opacity: 0.5;
 				background-color: blue;
+				z-index: 40;
+			}
+
+			.enemy {
+				position: absolute;
+				opacity: 0.5;
+				background-color: red;
+				z-index: 20;
 			}
 
 			body {
@@ -29,13 +39,14 @@
 			var game = function() {
 				var BOUNCE_IN = "easeOutSine";
 				var BOUNCE_OUT = "easeInSine";
+				var ENEMY_EASING = "linear";
 
 				var board = {
 					image: $(".board"),
 					xSize: 300,
 					ySize: 200,
 					zSize: 300,
-					increment: 60
+					increment: 75
 				}
 
 				var boardPosition = board.image.position();
@@ -44,7 +55,7 @@
 				var boardTop = boardPosition.top;
 				var boardBottom = boardPosition.top + board.ySize;
 
-				var fullTime = 450;
+				var fullTime = 400;
 				
 				var ball = {
 					image: $(".ball"),
@@ -59,8 +70,15 @@
 				var paddle = {
 					image: $(".paddle"),
 					xSize: 50,
-					ySize: 40,
+					ySize: 40
 				}
+
+				var enemy = {
+					image: $(".enemy"),
+					xSize: 20,
+					ySize: 16
+				}
+
 
 				var bounce = function(xSize, ySize, zSize, ballSize, easing, callback) {
 
@@ -97,66 +115,58 @@
 					var nextYSize;
 					var nextZSize;
 
-					var isWall = false;
+					var isWall = true;
 					var newBallSize;
+					var fraction;
 
 					if ((ballRight + xSize) >= boardRight && intersectsLeftRight((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardRight)) {
 						newXSize = (boardRight - ballRight);
 						nextXSize = (xSize - newXSize) * -1;
 						ball.xOffset = ball.xOffset * -1;
 
-						var fraction = Math.abs(newXSize / xSize);
-						isWall = true;
+						fraction = Math.abs(newXSize / xSize);
 
 						newYSize = ySize * fraction;
 						nextYSize = ySize - newYSize;
-
-						newZSize = zSize * fraction;
-						nextZSize = zSize - newZSize;
 
 					} else if ((ballLeft + xSize) <= boardLeft && intersectsLeftRight((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardLeft)) {
 						newXSize = (boardLeft - ballLeft) ;
 						nextXSize = (xSize - newXSize) * -1;
 						ball.xOffset = ball.xOffset * -1;
 
-						var fraction = Math.abs(newXSize / xSize);
-						isWall = true;
+						fraction = Math.abs(newXSize / xSize);
 
 						newYSize = ySize * fraction;
 						nextYSize = ySize - newYSize;
 
-						newZSize = zSize * fraction;
-						nextZSize = zSize - newZSize;
 					} else if ((ballTop + ySize) <= boardTop && intersectsTopBottom((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardTop)) {
 						newYSize = (boardTop - ballTop) ;
 						nextYSize = (ySize - newYSize) * -1;
 						ball.yOffset = ball.yOffset * -1;
 
-						var fraction = Math.abs(newYSize / ySize);
-						isWall = true;
+						fraction = Math.abs(newYSize / ySize);
 
 						newXSize = xSize * fraction;
 						nextXSize = xSize - newXSize;
 
-						newZSize = zSize * fraction;
-						nextZSize = zSize - newZSize;
 					} else if ((ballBottom + ySize) >= boardBottom && intersectsTopBottom((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardBottom)) {
 						newYSize = (boardBottom - ballBottom);
 						nextYSize = (ySize - newYSize) * -1;
 						ball.yOffset = ball.yOffset * -1;
 
-						var fraction = Math.abs(newYSize / ySize);
-						isWall = true;
+						fraction = Math.abs(newYSize / ySize);
 
 						newXSize = xSize * fraction;
 						nextXSize = xSize - newXSize;
 
-						newZSize = zSize * fraction;
-						nextZSize = zSize - newZSize;
+					} else {
+						isWall = false;
 					}
-
 						
 					if (isWall) {
+
+						newZSize = zSize * fraction;
+						nextZSize = zSize - newZSize;
 
 						if (easing === BOUNCE_IN) {
 							newBallSize = ((ball.maxSize - ball.minSize) * (1 - fraction)) + ball.minSize;
@@ -166,9 +176,7 @@
 
 						time = getBounceTime(fullTime, newXSize, newYSize, newZSize);
 					} else {
-
 						time = getBounceTime(fullTime, xSize, ySize, zSize);
-
 					}
 
 					return {
@@ -182,7 +190,6 @@
 							bounce(nextXSize, nextYSize, nextZSize, ballSize, easing, callback);
 						}
 					}
-
 				}
 
 				var intersectsTopBottom = function(x, y, xSize, ySize, y1) {
@@ -222,6 +229,11 @@
 				}
 
 				var bounceAnimation = function(xSize, ySize, ballSize, time, easing, callback) {
+
+					if (ballSize === ball.minSize) {
+						enemyAnimation(xSize, ySize, time);
+					};
+
 					ball.image.animate({
 					    height: ballSize,
 					    width: ballSize,
@@ -233,6 +245,26 @@
 				  		easing: easing,
 				  		complete: callback
 				  	});
+				}
+
+				var enemyAnimation = function(xSize, ySize, time) {
+					var ballPosition = ball.image.position();
+					var ballLeft = ballPosition.left;
+					var ballTop = ballPosition.top;
+
+					
+
+					var left = ballLeft + xSize - 7;
+					var top = ballTop + ySize - 5;
+
+					enemy.image.animate({
+						left: left,
+					    top: top,
+					},
+					{
+						duration: (time * 0.75),
+				  		easing: ENEMY_EASING
+					});
 				}
 
 				var getBounceTime = function(baseTime, xSize, ySize, zSize) {
@@ -301,6 +333,11 @@
 						height: paddle.ySize
 					});
 
+					enemy.image.css({
+						width: enemy.xSize,
+						height: enemy.ySize
+					});
+
 					$(document).on('mousemove', function(e){
 					    $('.paddle').css({
 					       left:  e.pageX,
@@ -325,5 +362,7 @@
 			<div class="ball"></div>
 		</div>
 		<div class="paddle"></div>
+
+		<div class="enemy"></div>
 	</body>
 </html>
