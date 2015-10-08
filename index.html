@@ -35,7 +35,7 @@
 					xSize: 300,
 					ySize: 200,
 					zSize: 300,
-					increment: (50)
+					increment: 60
 				}
 
 				var boardPosition = board.image.position();
@@ -44,7 +44,7 @@
 				var boardTop = boardPosition.top;
 				var boardBottom = boardPosition.top + board.ySize;
 
-				var fullTime = 500;
+				var fullTime = 450;
 				
 				var ball = {
 					image: $(".ball"),
@@ -127,13 +127,36 @@
 
 						newZSize = zSize * fraction;
 						nextZSize = zSize - newZSize;
+					} else if ((ballTop + ySize) <= boardTop && intersectsTopBottom((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardTop)) {
+						newYSize = (boardTop - ballTop) ;
+						nextYSize = (ySize - newYSize) * -1;
+						ball.yOffset = ball.yOffset * -1;
+
+						var fraction = Math.abs(newYSize / ySize);
+						isWall = true;
+
+						newXSize = xSize * fraction;
+						nextXSize = xSize - newXSize;
+
+						newZSize = zSize * fraction;
+						nextZSize = zSize - newZSize;
+					} else if ((ballBottom + ySize) >= boardBottom && intersectsTopBottom((ballLeft + ballRight) / 2, (ballTop + ballBottom) / 2, xSize, ySize, boardBottom)) {
+						newYSize = (boardBottom - ballBottom);
+						nextYSize = (ySize - newYSize) * -1;
+						ball.yOffset = ball.yOffset * -1;
+
+						var fraction = Math.abs(newYSize / ySize);
+						isWall = true;
+
+						newXSize = xSize * fraction;
+						nextXSize = xSize - newXSize;
+
+						newZSize = zSize * fraction;
+						nextZSize = zSize - newZSize;
 					}
 
 						
 					if (isWall) {
-
-						mark(ballLeft, ballTop, "red");
-						mark(ballLeft + xSize, ballTop + ySize, "blue");
 
 						if (easing === BOUNCE_IN) {
 							newBallSize = ((ball.maxSize - ball.minSize) * (1 - fraction)) + ball.minSize;
@@ -142,12 +165,6 @@
 						}
 
 						time = getBounceTime(fullTime, newXSize, newYSize, newZSize);
-
-						log("xSize: " + xSize + " | newXSize: " + newXSize + " | nextXSize: " + nextXSize + "<br />");
-						log("fraction: " + fraction + " | ballSize: " + ballSize + " | newBallSize: " + newBallSize + "<br />");
-						log("time: " + time + " | ");
-						log("<br>");
-
 					} else {
 
 						time = getBounceTime(fullTime, xSize, ySize, zSize);
